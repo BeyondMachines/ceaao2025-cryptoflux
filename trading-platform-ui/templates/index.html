@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CryptoFlux – Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --text: #0f172a;
+      --muted: #475569;
+      --card: #ffffff;
+      --card-border: #e2e8f0;
+      --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+      --card-shadow-hover: 0 10px 20px rgba(0, 0, 0, 0.12);
+      --pill-ok-bg: #10b981;
+      --pill-ok-fg: #ffffff;
+      --pill-bad-bg: #ef4444;
+      --pill-bad-fg: #ffffff;
+      --accent: #3b82f6;
+      --accent-light: #60a5fa;
+      --accent-dark: #2563eb;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --error: #ef4444;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body { 
+      height: 100%; 
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    .navbar { 
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); 
+      border-bottom: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 1rem 0;
+    }
+    
+    .brand { 
+      font-weight: 800; 
+      font-size: 1.6rem;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      letter-spacing: -0.5px;
+    }
+
+    .card { 
+      background: var(--card); 
+      border: 1px solid var(--card-border); 
+      border-radius: 16px; 
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .kpi { 
+      font-size: clamp(1.8rem, 3vw, 2.5rem); 
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1.2;
+    }
+    
+    .kpi-label { 
+      font-size: .9rem; 
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+
+    .pill { 
+      border-radius: 999px; 
+      padding: .4rem .9rem; 
+      font-weight: 600; 
+      font-size: .85rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s;
+      display: inline-block;
+    }
+    
+    .pill-ok  { 
+      background: var(--pill-ok-bg); 
+      color: var(--pill-ok-fg);
+      animation: pulse 2s infinite;
+    }
+    
+    .pill-bad { 
+      background: var(--pill-bad-bg); 
+      color: var(--pill-bad-fg); 
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.85; }
+    }
+
+    .chart-wrap { 
+      position: relative; 
+      height: 320px;
+      padding: 10px;
+    }
+    
+    .section-title { 
+      font-size: 1.1rem; 
+      font-weight: 700; 
+      letter-spacing: .3px;
+      color: var(--text);
+    }
+
+    .table { 
+      color: var(--text);
+      margin-bottom: 0;
+    }
+    
+    .table thead th { 
+      color: var(--muted); 
+      border-bottom: 2px solid var(--card-border);
+      text-transform: uppercase;
+      font-size: .85rem;
+      letter-spacing: 1px;
+      font-weight: 700;
+      background: var(--bg);
+      padding: 0.75rem;
+    }
+    
+    .table tbody td { 
+      border-top: 1px solid var(--card-border);
+      padding: 0.75rem;
+    }
+    
+    .table tbody tr:hover {
+      background: rgba(59, 130, 246, 0.05);
+      transition: background 0.2s;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--muted);
+    }
+    
+    .spinner {
+      border: 3px solid var(--card-border);
+      border-top: 3px solid var(--accent);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error {
+      color: var(--error);
+      padding: 15px 20px;
+      background: rgba(239, 68, 68, 0.08);
+      border-radius: 12px;
+      margin: 10px 0;
+      border-left: 4px solid var(--error);
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+    
+    .error-code {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--error);
+      letter-spacing: 2px;
+    }
+    
+    .warning {
+      color: var(--warning);
+      padding: 15px 20px;
+      background: rgba(245, 158, 11, 0.08);
+      border-radius: 12px;
+      margin: 10px 0;
+      border-left: 4px solid var(--warning);
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+    
+    .badge {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--accent-dark);
+      padding: 5px 12px;
+      border-radius: 12px;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+    
+    .symbol-badge {
+      background: linear-gradient(135deg, var(--accent-light), var(--accent));
+      color: white;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: .8rem;
+      font-weight: 700;
+      display: inline-block;
+    }
+    
+    .table-responsive {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    @media (max-width: 768px) {
+      .brand {
+        font-size: 1.3rem;
+      }
+      
+      .kpi {
+        font-size: 1.5rem;
+      }
+      
+      .chart-wrap {
+        height: 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar px-3">
+  <div class="container-fluid">
+    <span class="brand">⚡ CryptoFlux</span>
+    <div class="d-flex gap-3 align-items-center">
+      <span id="last-update" class="badge">Initializing...</span>
+      <span id="health-pill" class="pill pill-bad">checking…</span>
+    </div>
+  </div>
+</nav>
+
+<main class="container py-4">
+  <!-- KPIs -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card p-3 h-100">
+        <div class="kpi" id="kpi-tx">—</div>
+        <div class="kpi-label">Transactions</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card p-3 h-100">
+        <div class="kpi" id="kpi-vol">—</div>
+        <div class="kpi-label">Volume (USD)</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card p-3 h-100">
+        <div class="kpi" id="kpi-buy">—</div>
+        <div class="kpi-label">Buy Orders</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card p-3 h-100">
+        <div class="kpi" id="kpi-sell">—</div>
+        <div class="kpi-label">Sell Orders</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-lg-7">
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="section-title">📈 Volume Trend</span>
+          <span class="badge" id="series-meta">Loading...</span>
+        </div>
+        <div id="line-chart-loading" class="loading">
+          <div class="spinner"></div>
+          <p>Loading chart data...</p>
+        </div>
+        <div id="line-chart-error" class="error" style="display:none;"></div>
+        <div id="line-chart-warning" class="warning" style="display:none;"></div>
+        <div class="chart-wrap" id="line-chart-container" style="display:none;">
+          <canvas id="chart-line"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-5">
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="section-title">📊 Volume by Symbol</span>
+          <span class="badge" id="bar-meta">Loading...</span>
+        </div>
+        <div id="bar-chart-loading" class="loading">
+          <div class="spinner"></div>
+          <p>Loading chart data...</p>
+        </div>
+        <div id="bar-chart-error" class="error" style="display:none;"></div>
+        <div id="bar-chart-warning" class="warning" style="display:none;"></div>
+        <div class="chart-wrap" id="bar-chart-container" style="display:none;">
+          <canvas id="chart-bar"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tables -->
+  <div class="row g-3">
+    <div class="col-12 col-lg-6">
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="section-title">🏆 Top by Volume</span>
+          <span class="badge" id="top-vol-meta">0 symbols</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Symbol</th><th class="text-end">Volume</th><th class="text-end">Count</th></tr></thead>
+            <tbody id="tbody-top-volume">
+              <tr><td colspan="3" class="text-center text-muted">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="section-title">📈 Top by Count</span>
+          <span class="badge" id="top-cnt-meta">0 symbols</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead><tr><th>Symbol</th><th class="text-end">Count</th><th class="text-end">Volume</th></tr></thead>
+            <tbody id="tbody-top-count">
+              <tr><td colspan="3" class="text-center text-muted">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  'use strict';
+  
+  // ============================================================
+  // SECURITY: Safe Output Functions
+  // ============================================================
+  
+  function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function setTextContent(element, content) {
+    if (element) {
+      element.textContent = content;
+    }
+  }
+
+  function sanitizeNumber(value, defaultValue = 0) {
+    const num = Number(value);
+    return isNaN(num) || !isFinite(num) ? defaultValue : num;
+  }
+
+  function sanitizeSymbol(symbol) {
+    if (!symbol) return 'UNKNOWN';
+    return String(symbol).replace(/[^A-Za-z0-9-]/g, '').substring(0, 20);
+  }
+
+  // ============================================================
+  // ERROR CODE MASKING (*** pattern)
+  // ============================================================
+  
+  function maskErrorCode(statusCode) {
+    const code = String(statusCode);
+    return '*'.repeat(code.length);
+  }
+  
+  function formatErrorMessage(statusCode, statusText, additionalInfo = '') {
+    const masked = maskErrorCode(statusCode);
+    let message = ` Error ${masked}`;
+    
+    if (statusCode === 404) {
+      message += ' - Resource not found';
+    } else if (statusCode === 500) {
+      message += ' - Internal server error';
+    } else if (statusCode === 503) {
+      message += ' - Service unavailable';
+    } else if (statusCode === 401) {
+      message += ' - Unauthorized';
+    } else if (statusCode === 403) {
+      message += ' - Forbidden';
+    } else if (statusText) {
+      message += ` - ${statusText}`;
+    }
+    
+    if (additionalInfo) {
+      message += `. ${additionalInfo}`;
+    }
+    
+    return message;
+  }
+
+  // ============================================================
+  // Formatting Helpers
+  // ============================================================
+  
+  const fmtInt = (n) => {
+    const safe = sanitizeNumber(n, 0);
+    return new Intl.NumberFormat().format(safe);
+  };
+  
+  const fmtUsd = (n) => {
+    const safe = sanitizeNumber(n, 0);
+    if (safe >= 1000000) return `$${(safe/1000000).toFixed(1)}M`;
+    if (safe >= 1000) return `$${(safe/1000).toFixed(1)}K`;
+    return new Intl.NumberFormat(undefined, { 
+      style: 'currency', 
+      currency: 'USD', 
+      maximumFractionDigits: 0 
+    }).format(safe);
+  };
+
+  // ============================================================
+  // Health Check
+  // ============================================================
+  
+  async function loadHealth() {
+    try {
+      const r = await fetch('/api/health');
+      
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      }
+      
+      const j = await r.json();
+      const pill = document.getElementById('health-pill');
+      
+      if (j.status === 'ok') {
+        setTextContent(pill, 'Online');
+        pill.classList.remove('pill-bad');
+        pill.classList.add('pill-ok');
+      } else {
+        setTextContent(pill, 'Error');
+        pill.classList.remove('pill-ok');
+        pill.classList.add('pill-bad');
+      }
+    } catch (e) {
+      console.error('Health check failed:', e);
+      const pill = document.getElementById('health-pill');
+      setTextContent(pill, 'Offline');
+      pill.classList.remove('pill-ok');
+      pill.classList.add('pill-bad');
+    }
+  }
+
+  // ============================================================
+  // Chart Rendering
+  // ============================================================
+  
+  let lineChart = null;
+  let barChart  = null;
+
+  function renderCharts(series, bar) {
+    // Line Chart
+    const lineContainer = document.getElementById('line-chart-container');
+    const lineLoading = document.getElementById('line-chart-loading');
+    const lineError = document.getElementById('line-chart-error');
+    const lineWarning = document.getElementById('line-chart-warning');
+    
+    if (!series || series.length === 0) {
+      lineLoading.style.display = 'none';
+      lineError.style.display = 'none';
+      setTextContent(lineWarning, 'No volume data available yet. Data ingestion runs every 5 minutes.');
+      lineWarning.style.display = 'block';
+      lineContainer.style.display = 'none';
+    } else {
+      lineLoading.style.display = 'none';
+      lineError.style.display = 'none';
+      lineWarning.style.display = 'none';
+      lineContainer.style.display = 'block';
+
+      if (lineChart) {
+        lineChart.destroy();
+        lineChart = null;
+      }
+
+      const labelsLine = series.map(p => {
+        const date = new Date(p.bucket_ts);
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      });
+      const dataLine = series.map(p => sanitizeNumber(p.volume, 0));
+
+      lineChart = new Chart(document.getElementById('chart-line').getContext('2d'), {
+        type: 'line',
+        data: { 
+          labels: labelsLine, 
+          datasets: [{ 
+            label: 'Volume (USD)', 
+            data: dataLine, 
+            tension: 0.4, 
+            fill: true, 
+            borderWidth: 3, 
+            borderColor: 'rgba(59, 130, 246, 1)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }] 
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 750, easing: 'easeInOutQuart' },
+          plugins: { 
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f1f5f9',
+              bodyColor: '#cbd5e1',
+              padding: 12,
+              displayColors: false,
+              callbacks: {
+                label: (context) => `Volume: ${fmtUsd(context.parsed.y)}`
+              }
+            }
+          },
+          scales: {
+            x: { 
+              grid: { color: 'rgba(226, 232, 240, 0.8)' },
+              ticks: { color: '#475569', font: { size: 11 } }
+            },
+            y: { 
+              ticks: { 
+                callback: (v) => fmtUsd(v),
+                color: '#475569',
+                font: { size: 11 }
+              }, 
+              grid: { color: 'rgba(226, 232, 240, 0.8)' }
+            }
+          }
+        }
+      });
+
+      const firstDate = labelsLine[0] || 'N/A';
+      const lastDate = labelsLine[labelsLine.length - 1] || 'N/A';
+      setTextContent(document.getElementById('series-meta'), `${firstDate} → ${lastDate}`);
+    }
+
+    // Bar Chart
+    const barContainer = document.getElementById('bar-chart-container');
+    const barLoading = document.getElementById('bar-chart-loading');
+    const barError = document.getElementById('bar-chart-error');
+    const barWarning = document.getElementById('bar-chart-warning');
+    
+    if (!bar || bar.length === 0) {
+      barLoading.style.display = 'none';
+      barError.style.display = 'none';
+      setTextContent(barWarning, 'No symbol data available yet.');
+      barWarning.style.display = 'block';
+      barContainer.style.display = 'none';
+    } else {
+      barLoading.style.display = 'none';
+      barError.style.display = 'none';
+      barWarning.style.display = 'none';
+      barContainer.style.display = 'block';
+
+      if (barChart) {
+        barChart.destroy();
+        barChart = null;
+      }
+
+      const labelsBar = bar.map(b => sanitizeSymbol(b.symbol));
+      const dataBar = bar.map(b => sanitizeNumber(b.volume, 0));
+      
+      const colors = labelsBar.map((_, i) => {
+        const hue = 200 + (i * 25);
+        return `hsla(${hue}, 65%, 55%, 0.8)`;
+      });
+
+      barChart = new Chart(document.getElementById('chart-bar').getContext('2d'), {
+        type: 'bar',
+        data: { 
+          labels: labelsBar, 
+          datasets: [{ 
+            label: 'Volume (USD)', 
+            data: dataBar, 
+            backgroundColor: colors,
+            borderColor: colors.map(c => c.replace('0.8', '1')),
+            borderWidth: 2,
+            borderRadius: 8
+          }] 
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 750, easing: 'easeInOutQuart' },
+          plugins: { 
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#f1f5f9',
+              bodyColor: '#cbd5e1',
+              padding: 12,
+              displayColors: true,
+              callbacks: {
+                label: (context) => `Volume: ${fmtUsd(context.parsed.y)}`
+              }
+            }
+          },
+          scales: {
+            x: { 
+              grid: { display: false },
+              ticks: { color: '#475569', font: { weight: 'bold', size: 11 } }
+            },
+            y: { 
+              ticks: { 
+                callback: (v) => fmtUsd(v),
+                color: '#475569',
+                font: { size: 11 }
+              }, 
+              grid: { color: 'rgba(226, 232, 240, 0.8)' }
+            }
+          }
+        }
+      });
+
+      setTextContent(document.getElementById('bar-meta'), `${labelsBar.length} symbols`);
+    }
+  }
+
+  // ============================================================
+  // Load Stats with Error Handling
+  // ============================================================
+  
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/stats');
+      
+      if (!res.ok) {
+        const errorMsg = formatErrorMessage(res.status, res.statusText);
+        throw new Error(errorMsg);
+      }
+      
+      const data = await res.json();
+      console.log('Stats data received:', data);
+
+      // Update KPIs
+      setTextContent(document.getElementById('kpi-tx'), fmtInt(data.kpis?.tx_count));
+      setTextContent(document.getElementById('kpi-vol'), fmtUsd(data.kpis?.total_volume_usd));
+      setTextContent(document.getElementById('kpi-buy'), fmtInt(data.kpis?.buy_count));
+      setTextContent(document.getElementById('kpi-sell'), fmtInt(data.kpis?.sell_count));
+
+      // Update Top by Volume Table
+      const tbVol = document.getElementById('tbody-top-volume');
+      tbVol.innerHTML = '';
+      if (data.top_by_volume && data.top_by_volume.length > 0) {
+        data.top_by_volume.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><span class="symbol-badge">${escapeHtml(sanitizeSymbol(row.symbol))}</span></td>
+            <td class="text-end"><strong>${escapeHtml(fmtUsd(row.volume))}</strong></td>
+            <td class="text-end">${escapeHtml(fmtInt(row.count ?? 0))}</td>`;
+          tbVol.appendChild(tr);
+        });
+        setTextContent(document.getElementById('top-vol-meta'), `${data.top_by_volume.length} symbols`);
+      } else {
+        tbVol.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No data yet</td></tr>';
+        setTextContent(document.getElementById('top-vol-meta'), '0 symbols');
+      }
+
+      // Update Top by Count Table
+      const tbCnt = document.getElementById('tbody-top-count');
+      tbCnt.innerHTML = '';
+      if (data.top_by_count && data.top_by_count.length > 0) {
+        data.top_by_count.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><span class="symbol-badge">${escapeHtml(sanitizeSymbol(row.symbol))}</span></td>
+            <td class="text-end"><strong>${escapeHtml(fmtInt(row.count))}</strong></td>
+            <td class="text-end">${escapeHtml(fmtUsd(row.volume))}</td>`;
+          tbCnt.appendChild(tr);
+        });
+        setTextContent(document.getElementById('top-cnt-meta'), `${data.top_by_count.length} symbols`);
+      } else {
+        tbCnt.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No data yet</td></tr>';
+        setTextContent(document.getElementById('top-cnt-meta'), '0 symbols');
+      }
+
+      // Render charts
+      const series = data.series || data.series_7d || [];
+      renderCharts(series, data.by_symbol_bar || []);
+      
+      // Update timestamp
+      const now = new Date();
+      setTextContent(document.getElementById('last-update'), 
+        `Updated ${now.toLocaleTimeString()}`);
+
+    } catch (error) {
+      console.error('Error loading stats:', error);
+      
+      // Show error in line chart area
+      document.getElementById('line-chart-loading').style.display = 'none';
+      document.getElementById('line-chart-warning').style.display = 'none';
+      const errorEl = document.getElementById('line-chart-error');
+      setTextContent(errorEl, error.message);
+      errorEl.style.display = 'block';
+      
+      // Show error in bar chart area
+      document.getElementById('bar-chart-loading').style.display = 'none';
+      document.getElementById('bar-chart-warning').style.display = 'none';
+      const barErrorEl = document.getElementById('bar-chart-error');
+      setTextContent(barErrorEl, error.message);
+      barErrorEl.style.display = 'block';
+    }
+  }
+
+  // ============================================================
+  // Initialize
+  // ============================================================
+  
+  // Initial load
+  loadHealth();
+  loadStats();
+  
+  // Auto-refresh every 30 seconds
+  setInterval(() => { 
+    loadHealth(); 
+    loadStats(); 
+  }, 30000);
+</script>
+</body>
+</html>

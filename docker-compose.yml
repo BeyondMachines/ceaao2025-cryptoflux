@@ -1,0 +1,249 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: cryptoflux-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./configs/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - cryptoflux-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-dr:
+    image: postgres:18-alpine
+    container_name: cryptoflux-postgres-dr
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DR_DB_NAME}
+      POSTGRES_USER: ${DR_DB_USER}
+      POSTGRES_PASSWORD: ${DR_DB_PASS}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5433:5432"  # Different host port
+    volumes:
+      - dr_pgdata:/var/lib/postgresql/data
+      - ./configs/dr-postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - cryptoflux-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DR_DB_USER} -d ${DR_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  # Only runs in local mode (COMPOSE_PROFILES=local-api)
+  ext_api:  
+    build:
+      context: ./external-transactions-api
+      dockerfile: Dockerfile
+    container_name: cryptoflux-ext_api
+    environment:
+      USE_SQLITE: "True"
+      API_KEY_DB_PATH: /secrets/api_keys.db
+    volumes:
+      - ./external-transactions-api/secrets/api_keys.db:/secrets/api_keys.db:ro
+    ports:
+      - "8080:8000"
+    networks:
+      - cryptoflux-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s  
+      retries: 5
+    restart: unless-stopped
+
+  liquidity_calculator:
+    build:
+      context: ./liquidity_calc
+      dockerfile: Dockerfile
+    container_name: cryptoflux-liquidity_calculator
+    environment:
+      TRADING_DATA_API_KEY: ${TRADING_DATA_API_KEY}
+      TRADING_DATA_URL: ${TRADING_DATA_URL}
+      LIQ_WINDOW_MIN: $(LIQ_WINDOW_MIN)
+      INTERNAL_SERVICE_KEY: "hardcoded_secret_123"
+      PORT: 8001
+    ports:
+      - "8001:8001"
+    networks:
+      - cryptoflux-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8001/health || exit 1"]
+      interval: 30s
+      timeout: 10s 
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+    depends_on:
+      trading_data:
+        condition: service_healthy
+
+  trading_ui:
+    build:
+      context: ./trading-platform-ui
+      dockerfile: Dockerfile
+    container_name: cryptoflux-trading_ui
+    environment:
+      FLASK_APP: app:create_app
+      FLASK_DEBUG: "True"
+      SECRET_KEY: ${SECRET_KEY}
+
+      DB_HOST : ${DB_HOST}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+
+      EXT_API_URL: ${EXT_API_URL}     
+      EXT_API_KEY: ${EXT_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      trading_data:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+      - "2222:22"
+      - "6379:6379"
+    networks:
+      - cryptoflux-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 5
+    restart: on-failure
+
+  trading_data:
+    build:
+      context: ./trading_data_microservice
+      dockerfile: Dockerfile
+    container_name: cryptoflux-trading_data
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      TRADING_DATA_API_KEY: ${TRADING_DATA_API_KEY}
+    ports:
+      - "7100:7100"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cryptoflux-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:7100/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+
+  data_ingestion_service:
+    build:
+      context: ./data_ingestion_service         
+      dockerfile: Dockerfile
+    container_name: cryptoflux-data_ingestion_service
+    command: ["python", "-u", "worker.py"]
+    environment:
+      # DATABASE_URL: ${DATABASE_URL}
+      DB_HOST : ${DB_HOST}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      EXT_API_URL: ${EXT_API_URL}
+      EXT_API_KEY: ${EXT_API_KEY}
+      INTERVAL_SECONDS: ${INTERVAL_SECONDS}
+      BATCH_SIZE: ${BATCH_SIZE}
+      RETENTION_DAYS: ${RETENTION_DAYS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cryptoflux-network
+    healthcheck:
+      test: ["CMD-SHELL", "python /app/healthcheck.py || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+    volumes:
+      - ./logs/data_ingestion:/app/logs  # Persist logs
+  
+  dr_sync_service:
+    build:
+      context: ./dr_sync_service
+      dockerfile: Dockerfile
+    container_name: cryptoflux-dr_sync
+    command: ["python", "-u", "worker.py"]
+    environment:
+      # Primary DB
+      PRIMARY_DB_HOST: postgres
+      PRIMARY_DB_PORT: 5432
+      PRIMARY_DB_NAME: ${DB_NAME}
+      PRIMARY_DB_USER: ${DB_USER}
+      PRIMARY_DB_PASS: ${DB_PASS}
+      
+      # DR DB
+      DR_DB_HOST: postgres-dr
+      DR_DB_PORT: 5432
+      DR_DB_NAME: ${DR_DB_NAME}
+      DR_DB_USER: ${DR_DB_USER}
+      DR_DB_PASS: ${DR_DB_PASS}
+      
+      SYNC_INTERVAL_SECONDS: ${SYNC_INTERVAL_SECONDS:-300}  # Default 5 min
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-dr:
+        condition: service_healthy
+    networks:
+      - cryptoflux-network
+    healthcheck:
+      test: ["CMD-SHELL", "python /app/healthcheck.py || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: cryptoflux-dozzle
+    ports:
+      - "8888:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+    - DOZZLE_FILTER_CONTAINERS=running,exited  # Show running and exited containers
+    networks:
+      - cryptoflux-network
+
+
+volumes:
+  pgdata: 
+    driver: local
+  dr_pgdata:
+    driver: local
+
+networks:
+  cryptoflux-network:
+    driver: bridge

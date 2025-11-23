@@ -1,0 +1,53 @@
+name: Liquidity Calculator CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '*/5 * * * *'  # Run every 5 minutes automatically
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: 'Comma-separated symbols to analyze (leave empty for default)'
+        required: false
+        type: string
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  calculate-liquidity:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' || 
+      github.event_name == 'push' || 
+      github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Show manual trigger info
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        echo "Manual trigger detected!"
+        echo "Symbols: ${{ github.event.inputs.symbols }}"
+    
+    - name: Calculate liquidity
+      run: |
+        python scripts/batch_calculation.py "${{ github.event.inputs.symbols }}"
+      env:
+        CALCULATOR_API_KEY: ${{ secrets.CALCULATOR_API_KEY }}
+        TRADING_API_KEY: ${{ secrets.TRADING_API_KEY }}
+        TRADING_API_URL: ${{ secrets.TRADING_API_URL }}

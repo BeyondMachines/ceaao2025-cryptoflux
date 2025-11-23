@@ -1,0 +1,18 @@
+
+# Flask web framework
+Flask
+
+# Database ORM
+Flask-SQLAlchemy
+
+# Database migrations
+Flask-Migrate
+
+# Environment variables management
+python-dotenv
+
+# PostgreSQL database adapter
+psycopg2-binary
+
+requests
+
