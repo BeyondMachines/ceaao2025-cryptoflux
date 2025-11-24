@@ -75,7 +75,7 @@ services:
     environment:
       TRADING_DATA_API_KEY: ${TRADING_DATA_API_KEY}
       TRADING_DATA_URL: ${TRADING_DATA_URL}
-      LIQ_WINDOW_MIN: $(LIQ_WINDOW_MIN)
+      LIQ_WINDOW_MIN: ${LIQ_WINDOW_MIN}
       INTERNAL_SERVICE_KEY: "hardcoded_secret_123"
       PORT: 8001
     ports:
