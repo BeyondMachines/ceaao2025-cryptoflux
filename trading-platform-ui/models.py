@@ -20,3 +20,25 @@ def init_database(app, allow_create_all=False):
     if allow_create_all:
         with app.app_context():
             db.create_all()
+
+class Liquidity(db.Model):
+    __tablename__ = "liquidity"
+    id = db.Column(db.Integer, primary_key=True)
+    symbol = db.Column(db.String(32), nullable=False, index=True)
+    window_start_unix = db.Column(db.Integer, nullable=False)
+    window_end_unix = db.Column(db.Integer, nullable=False)
+    volume_usd = db.Column(db.Numeric(24, 8), nullable=False, server_default="0")
+    trades_count = db.Column(db.Integer, nullable=False, server_default="0")
+    liq_score = db.Column(db.Numeric(24, 8), nullable=False, server_default="0")
+
+
+class LiquidityResults(db.Model):
+    __tablename__ = "liquidity_results"
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.String(64), nullable=False)
+    symbol = db.Column(db.String(32), nullable=False, index=True)
+    window_start_unix = db.Column(db.Integer, nullable=False)
+    window_end_unix = db.Column(db.Integer, nullable=False)
+    volume_usd = db.Column(db.Numeric(24, 8), nullable=False, server_default="0")
+    trades_count = db.Column(db.Integer, nullable=False, server_default="0")
+    liq_score = db.Column(db.Numeric(24, 8), nullable=False, server_default="0")

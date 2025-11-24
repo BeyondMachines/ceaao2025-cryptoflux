@@ -7,7 +7,7 @@ from decimal import Decimal
 from flask import Blueprint, jsonify, current_app, request
 from sqlalchemy import func, text
 
-from models import db, Transaction
+from models import db, Transaction, LiquidityResults
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -208,6 +208,21 @@ def stats():
 
     by_symbol_bar = [{"symbol": s, "volume": _d(v)} for s, v in by_symbol_rows]
 
+    # Liquidity data from liquidity_results (top 10 by liq_score)
+    liquidity_data = [
+        {
+            "symbol": row.symbol,
+            "liq_score": _d(row.liq_score),
+            "volume_usd": _d(row.volume_usd),
+            "trades_count": int(row.trades_count),
+            "job_id": row.job_id
+        }
+        for row in db.session.query(LiquidityResults)
+        .order_by(LiquidityResults.liq_score.desc())
+        .limit(10)
+        .all()
+    ]
+
     return jsonify({
         "kpis": {
             "tx_count": int(tx_count),
@@ -219,4 +234,5 @@ def stats():
         "top_by_count": top_by_count,
         "series_7d": series_7d,
         "by_symbol_bar": by_symbol_bar,
+        "liquidity": liquidity_data,  # NEW
     })
