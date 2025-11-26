@@ -234,6 +234,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
     - DOZZLE_FILTER_CONTAINERS=running,exited  # Show running and exited containers
+    - DOZZLE_ENABLE_SHELL=true
     networks:
       - cryptoflux-network
 
