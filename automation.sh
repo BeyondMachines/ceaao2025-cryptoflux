@@ -21,7 +21,7 @@ while true; do
     # Every 10 minutes - Calculate liquidity
     if [ $((minute_counter % 10)) -eq 0 ]; then
         echo "[$current_time] 📊 Generating transactions..."
-        docker exec $CONTAINER_NAME python python scripts/batch_calculation.py
+        docker exec $CONTAINER_NAME python scripts/batch_calculation.py
         echo ""
     fi
     
